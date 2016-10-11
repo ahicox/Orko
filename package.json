@@ -1,0 +1,15 @@
+{
+  "name": "Orko",
+  "version": "1.0.0",
+  "description": "Hide Yo Passwords, Hide yo wife, hide yo kids! they be snoopin' errybody up in heyuh!",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "ahicox",
+  "license": "CC0-1.0",
+  "devDependencies": {
+    "crypto-js": "^3.1.7",
+    "electron": "^1.4.3"
+  }
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Frameless Boilerplate</title>
+        <link rel="stylesheet" href="main.css">
+
+        <!-- get jquery loaded up, include the rendrer js file -->
+        <script>
+            window.$ = window.jQuery = require('./libs/jquery.min.js');
+            jQuery(document).ready(function($){
+                require('./renderer.js');
+            });
+        </script>
+    </head>
+<body>
+
+<!-- the background layer and the title bar layer -->
+<div id="main" class="inFocus"></div>
+<div id="hdr">
+    <span id="title">Hello World!</span>
+    <span id="exit" class="btn">exit</span>
+    <span id="reload" class="btn">tools</span>
+</div>
+
+<!-- the main frame offset from the header (put everything else here)-->
+<div id="content">
+
+    <!-- this is an area that receives and displays messages from the app -->
+    <div id="msg" class="activeText">app messages go here</div>
+
+    <!-- "tabs" -->
+
+    <!-- copyItems tab -->
+    <div class="tab" id="copyItemTab" state="closed">
+        <div id="seriousBusiness" class="copyItem">
+            <span>don't drag me bro</span>
+        </div>
+        <div id="shadybusiness" class="copyItem">
+            <span>it's not personal, it's drag</span>
+        </div>
+    </div>
+
+    <!-- authentication tab -->
+    <div class="tab" id="authenticationTab" state="closed">
+        <input class="WMField" type="text" name="passkey" id="passKey" defaultText="Enter Pass Key" autocorrect="off" autocapitalize="off">
+    </div>
+</div>
+
+
+
+
+</body>
+</html>
