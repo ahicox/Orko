@@ -27,57 +27,51 @@ ipcRenderer.on('loseFocus', (event, message) => {
 	$("#title").addClass("inactiveText").removeClass("activeText");
 });
 
+// _renderKeyChain
+ipcRenderer.on('_renderKeyChain', (event, data) => {
+	console.log("inside _renderKeyChain");
+	var myHTML = [];
+	data.toc.forEach(function(key, idx){
+		console.log("_renderKeyChain (" + key + ")");
+		myHTML.push("<div id='" + key + "' class='copyItem'><span>" + key + "</span></div>");
+	});
+	$("#copyItemTab").empty().html(myHTML.join(""));
+	openTab("copyItemTab");
+});
+
 // _authResponse listener
 ipcRenderer.on('_authResponse', (event, data) => {
+	console.log("inside _authResponse: " + data.status);
 
 	// what we do next depends on the status in the _authResponse
 	switch(data.status){
 
-		case "init":
-			// something has gone very wrong (nothing executed inside main._auth)
+		case "bad password":
+			// tell the user the password was bad & reset the password field
+			$("#msg").text("bad password");
+			setWMFieldDefault($("#passKey"));
 			break;
 
-		case "doesNotExist":
-			// the file doesn't exist. if it was the default file we're looking for
-			// just the add GUI. once something's added, the file should exist
+		case "error":
+			// something unexpected went wrong
+			$("#msg").text("[error]: " . data.error);
 			break;
 
 		case "loaded":
-			// we loaded and decrypted the file.
-			// we should have data.tableOfContents here, which we can then itterate
-			// over, inject html objects for, hang the appropriate copy to clipboard
-			// hooks off of and then finally show copyItemTab
+			// everything went ok, render the table of contents for the user
+			// table of contents is on data.toc
+
+			// insert code here
+
 			break;
 
-		default:
-			// there should probably be some kinda sane catch all here
+		case "loaded-empty":
+			// the data file is empty, show 'em the add one screen
+			$("#msg").text("no existing keys in keychain, add item ...");
+			openTab("addItemTab");
+			break;
 	}
 
-
-	/* LEFT OFF HERE (10/10/16)
-	   so, I've got _auth coded up on main.js, and it's got hooks for file reading and decryption.
-	   however I can't really test that yet, because I don't have a file. I also haven't decided on
-	   a datamodel yet. I figure the way to go about this is to just start building, and the datamodel
-	   will flow out of that.
-
-	   next steps:
-
-	   		1) make an "add an item" GUI
-
-			2) hook the "doesNotExist" case above to open the "add an item" GUI
-
-			3) fill-in-the-blanks when it comes to hooking up the "add an item" GUI
-			   to actually do something. (so probably send a service requesting an
-		       add up to main.js, followed by a response event telling us to re-render
-		       the copyItem list).
-
-			   somewhere in there, I'm guessing main.js will write / create the file / whatever
-
-			4) write a lockGUI(lock|unlock) thing
-			   so we can lock the gui while we're waiting on
-			   response events from main.js
-
-*/
 
 });
 
@@ -183,11 +177,11 @@ function WMFieldLoseFocus(obj){
 		obj.removeClass("focusHighlight");
 	}
 	if ((! obj.val().trim()) || (obj.val() == obj.attr('defaultText'))){
-		obj.removeClass("maskMe");
+		if (obj.hasClass("maskField")){ obj.removeClass("maskMe"); }
 		setWMFieldDefault(obj);
 	}else{
 		obj.attr('defaultState', 'false').removeClass("default");
-		obj.addClass("maskMe");
+		if (obj.hasClass("maskField")){ obj.addClass("maskMe"); }
 		WMFieldReturn(obj);
 	}
 }
@@ -215,9 +209,18 @@ function WMFieldReturn(obj){
 				passKey: 	obj.val().trim(),
 				keyChain: 	'default'
 			});
+			break;
 
+		case "addKey_value":
+			$("#msg").text("adding key ...")
 
-		break;
+			// add a new key/value pair to the keyChain
+			ipcRenderer.send('_addKey', {
+				key:		$("#addKey_key").val().trim(),
+				value:		obj.val().trim(),
+				keyChain: 	'default'
+			});
+			break;
 
 	}
 }
