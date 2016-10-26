@@ -9,6 +9,7 @@ var cfg = {
     keyChains:  {
         default:    './defaultKeychain.crypt'
     },
+    _keyChainData: [],
     cryptAlgorithm: 'aes-256-ctr'
 }
 
@@ -18,11 +19,8 @@ const app = electron.app;
 const {ipcMain} = require('electron');
 const BrowserWindow = electron.BrowserWindow;
 
-// stuff for dealin' with files
-const fs = require('fs');
-
-// stuff for dealin' with encryption
-const crypt = require('crypto');
+// our handydandy keychain class, sucka
+const keyChain = require('./keyChain.js');
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -51,6 +49,8 @@ function createWindow () {
 
            // temp
            //mainWindow.webContents.openDevTools();
+
+           //mainWindow.webContents.openDevTools({mode: 'detach'});
 
 	       // send the init event to the app, along with the config
   	       mainWindow.webContents.send('init', cfg);
@@ -110,7 +110,7 @@ function createWindow () {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow)
+app.on('ready', createWindow);
 
 app.on('activate', function () {
   // On OS X it's common to re-create a window in the app when the
@@ -128,56 +128,92 @@ app.on('activate', function () {
 //}
 ipcMain.on('_auth', (event, arg) => {
 
-    var authResponse = {};
-
-    // load up the datafile (or save what we got for later if it's new)
-    fs.exists(cfg.keyChains[arg.keyChain], function(exists){
-        if (exists){
-
-            /* read the contents of the file */
-
-            // stat the file to get length
-            fs.stat(cfg.keyChains[arg.keyChain], function(error, stats) {
-                // open the file
-                fs.open(cfg.keyChains[arg.keyChain], "r", function(error, fd) {
-                    // define a buffer, into which we will place the file's contents
-                    var buffer = new Buffer(stats.size);
-                    fs.read(fd, buffer, 0, buffer.length, null, function(error, bytesRead, buffer) {
-
-                        // decrypt the file contents with the given passkey
-                        var decipher = crypto.createDecipher(cfg.cryptAlgorithm, arg.passKey);
-                        var dec = Buffer.concat([decipher.update(buffer) , decipher.final()]);
-                        cfg._data = dec.toString("utf8", 0, dec.length);
-
-                        // set authResponse keys
-                        authResponse.status = "loaded";
-                        authResponse.keyChain = arg.keyChain;
-
-                        // y'see, this is a thing we need to be doing here
-                        // which means we need to define a datamodel now ...
-                        // authResponse.tableOfContents =
-
-                        // close the file
-                        fs.close(fd);
-
-                    });
-                });
-            });
-
-        }else{
-
-            /* create the file
-               well actually, why bother creating an empty file
-               just note that the file doesn't exist, and we'll deal
-               with making the file if necessary on the write
-            */
-            authResponse.status = "doesNotExist";
-            authResponse.keyChain = arg.keyChain;
-            authResponse.passKey = arg.passKey;
-        }
+    cfg.keyChain = new keyChain({
+        name:       arg.keyChain,
+        fileName:   cfg.keyChains[arg.keyChain],
+        passPhrase: arg.passKey
     });
 
-    // send the _authResponse event
-    mainWindow.webContents.send('_authResponse', authResponse);
-    return(true);
+    // check for auth failure
+    if (cfg.keyChain.hasError){
+
+        mainWindow.webContents.send('_authResponse', {
+            status:         "bad password"
+        });
+        delete cfg.keyChain;
+        return(false);
+    }
+
+    // get our table of contents
+    let toc;
+    if (! (toc = cfg.keyChain.getTableOfContents())){
+        mainWindow.webContents.send('_authResponse', {
+            status:         "bad password",
+            error:          cfg.keyChain.error.message
+        });
+        return(false);
+    }
+    if (toc.length > 0){
+        // render the table o contents in the gui
+        mainWindow.webContents.send('_authResponse', {
+            status:         "loaded",
+            toc:            toc
+        });
+        return(true);
+
+    }else{
+        // it's empty, send 'em to the add one screen
+        mainWindow.webContents.send('_authResponse', {
+            status:         "loaded-empty"
+        });
+        return(true);
+    }
+
+});
+
+
+/* add a new item to the specified keyChain */
+ipcMain.on('_addKey', (event, arg) => {
+
+    /*
+       LEFT OFF HERE (10/26/2016)
+       everything in this function is old and busted
+       we need to update this to call keychain.addKey,
+       with appropriate error traps etc.
+
+       I'm damn close here. All the hard stuff is in
+       keyChain.js now, and it all works, so it's just
+       a matter of duct taping those calls into this
+       gui.
+
+       next step is properly rendering the key list
+       and setting up jquery hooks to call the
+       request-a-key-value-and-copy-it-to-clipboard
+       stuff
+   */
+
+
+    // this should of course have an error check
+    // to make sure we're not overwriting an existing key
+    if (! cfg._keyChainData.hasOwnProperty(arg.keyChain)){
+        cfg._keyChainData[arg.keyChain] = [];
+    }
+
+    cfg._keyChainData[arg.keyChain][arg.key] = arg.value;
+
+    // also we should call some kind of serialize thing here
+    // where we dump _keyChainData out to json, encrypt it
+    // and dump it to the file
+
+    // but that's for later. Let's see if we can just get
+    // the pieces fitting together for now
+
+
+
+    mainWindow.webContents.send('_renderKeyChain', {
+        status:     1,
+        fromAction: "_addKey",
+        toc:        Object.keys(cfg._keyChainData[arg.keyChain])
+    });
+
 });
