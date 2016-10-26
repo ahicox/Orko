@@ -33,18 +33,28 @@
 
     <!-- copyItems tab -->
     <div class="tab" id="copyItemTab" state="closed">
-        <div id="seriousBusiness" class="copyItem">
-            <span>don't drag me bro</span>
-        </div>
-        <div id="shadybusiness" class="copyItem">
-            <span>it's not personal, it's drag</span>
-        </div>
+
+        <!-- old and busted
+            <div id="seriousBusiness" class="copyItem">
+                <span>don't drag me bro</span>
+            </div>
+            <div id="shadybusiness" class="copyItem">
+                <span>it's not personal, it's drag</span>
+            </div>
+        -->
     </div>
 
     <!-- authentication tab -->
     <div class="tab" id="authenticationTab" state="closed">
-        <input class="WMField" type="text" name="passkey" id="passKey" defaultText="Enter Pass Key" autocorrect="off" autocapitalize="off">
+        <input class="WMField maskField" type="text" name="passkey" id="passKey" defaultText="Enter Pass Key" autocorrect="off" autocapitalize="off">
     </div>
+
+    <!-- add an item tab -->
+    <div class="tab" id="addItemTab" state="closed">
+        <input class="WMField" type="text" name="key" id="addKey_key" defaultText="Enter Key" autocorrect="off" autocapitalize="off">
+        <input class="WMField maskField" type="text" name="addKey_value" id="value" defaultText="Enter Value" autocorrect="off" autocapitalize="off">
+    </div>
+
 </div>
 
 
