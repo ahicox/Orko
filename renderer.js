@@ -319,3 +319,42 @@ function auth(authString){
 
 	// lockGUI
 }
+
+
+/*
+	LEFT OFF HERE (11/4/2016)
+	the _addKey message to main works with keyChain now (embedded in
+	WMFieldReturn above -- speaking of, this code needs to be reorganized
+	something awful).
+
+	Anyhow, next step is that we need something here in the renderer to catch
+	exceptions from the main process. I've created _mainException as the event
+	we just need to hook it up to something over here
+
+	after that, we just need to hook up some stuff in _renderKeyChain to hang hooks
+	off the rendered items to request the corresponding value off the keychain and
+	place it in the OS's cut/paste buffer
+
+	by there, we've pretty much got a working prototype that handles one item
+	from there:
+
+		* add a button that'll take us back into the "add an item" GUI to let us
+		  set up more than one item
+
+		* add a button to let us remove a key
+
+		* I'm on the fence as to if an edit key is needed. honestly I just feel like
+		  add a key and overwrite might be good enough. possibly with some kinda
+		  'are you sure' dialog.
+
+		* that and some general code cleanup. We've got lots of deadend placeholders
+		  in there like the idea of having multiple keychains (unnecessary in my opinion).
+
+		* one idea that might be worth exploring is adding meta data to each key like maybe
+		   a version history (these are the last x values of this key), and the date maybe
+
+		* even better might be a password generattor as in "even i don't know the password"
+		  click a button, it makes a truly random 32 char string or whatever and inserts it into
+		  the kechain blind. You can get it out onto the copy/paste bufer, maybe a right click to
+		  get the old one for really tight password changes.
+*/

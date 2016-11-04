@@ -155,7 +155,7 @@ ipcMain.on('_auth', (event, arg) => {
     }
     if (toc.length > 0){
         // render the table o contents in the gui
-        mainWindow.webContents.send('_authResponse', {
+        mainWindow.webContents.send('_renderKeyChain', {
             status:         "loaded",
             toc:            toc
         });
@@ -175,45 +175,40 @@ ipcMain.on('_auth', (event, arg) => {
 /* add a new item to the specified keyChain */
 ipcMain.on('_addKey', (event, arg) => {
 
-    /*
-       LEFT OFF HERE (10/26/2016)
-       everything in this function is old and busted
-       we need to update this to call keychain.addKey,
-       with appropriate error traps etc.
-
-       I'm damn close here. All the hard stuff is in
-       keyChain.js now, and it all works, so it's just
-       a matter of duct taping those calls into this
-       gui.
-
-       next step is properly rendering the key list
-       and setting up jquery hooks to call the
-       request-a-key-value-and-copy-it-to-clipboard
-       stuff
-   */
-
-
-    // this should of course have an error check
-    // to make sure we're not overwriting an existing key
-    if (! cfg._keyChainData.hasOwnProperty(arg.keyChain)){
-        cfg._keyChainData[arg.keyChain] = [];
+    // add the key or die tryin' ...
+    if (! (cfg.keyChain.addKey({
+        key:    arg.key,
+        value:  arg.value
+    }))){
+        // programming is an exceptional business
+        mainWindow.webContents.send('_mainException', {
+            status:      0,
+            fromAction:  '_addKey',
+            message:      "failed to add key to keyChain (addKey failed): " + cfg.keyChain.error.message,
+            errorLog:     cfg.keyChain.log
+        });
+        return(false);
     }
 
-    cfg._keyChainData[arg.keyChain][arg.key] = arg.value;
+    // I dub this style the "fiddy block"
+    // because every thing we do, we do it ... or die tryin'
+    let toc;
+    if (! (toc = cfg.keyChain.getTableOfContents())){
+        // gotta catch 'em all y'know ...
+        mainWindow.webContents.send('_mainException', {
+            status:      0,
+            fromAction:  '_addKey',
+            message:      "failed to retrieve keyChain table of contents (getTableOfContents failed): " + cfg.keyChain.error.message,
+            errorLog:     cfg.keyChain.log
+        });
+        return(false);
+    }
 
-    // also we should call some kind of serialize thing here
-    // where we dump _keyChainData out to json, encrypt it
-    // and dump it to the file
-
-    // but that's for later. Let's see if we can just get
-    // the pieces fitting together for now
-
-
-
+    // well if we've got down here and not been shot 5 times like our hero fiddy ...
     mainWindow.webContents.send('_renderKeyChain', {
         status:     1,
         fromAction: "_addKey",
-        toc:        Object.keys(cfg._keyChainData[arg.keyChain])
+        toc:        toc
     });
-
+    return(true);
 });
