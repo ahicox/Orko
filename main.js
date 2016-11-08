@@ -18,6 +18,7 @@ const electron = require('electron');
 const app = electron.app;
 const {ipcMain} = require('electron');
 const BrowserWindow = electron.BrowserWindow;
+const {clipboard} = require('electron');
 
 // our handydandy keychain class, sucka
 const keyChain = require('./keyChain.js');
@@ -47,10 +48,9 @@ function createWindow () {
     mainWindow.once('ready-to-show', () => {
 	       mainWindow.show();
 
-           // temp
-           //mainWindow.webContents.openDevTools();
-
-           //mainWindow.webContents.openDevTools({mode: 'detach'});
+           if (cfg.devMode){
+               mainWindow.webContents.openDevTools({mode: 'detach'});
+           }
 
 	       // send the init event to the app, along with the config
   	       mainWindow.webContents.send('init', cfg);
@@ -154,6 +154,10 @@ ipcMain.on('_auth', (event, arg) => {
         return(false);
     }
     if (toc.length > 0){
+        mainWindow.webContents.send('_authResponse', {
+            status:         "loaded"
+        });
+
         // render the table o contents in the gui
         mainWindow.webContents.send('_renderKeyChain', {
             status:         "loaded",
@@ -211,4 +215,36 @@ ipcMain.on('_addKey', (event, arg) => {
         toc:        toc
     });
     return(true);
+});
+
+
+/* request the decrypted value for a given key into the OS copy/paste buffer */
+ipcMain.on('_werk', (event, arg) => {
+
+    // ain't havin' nun a that, yo!
+    if (! arg.hasOwnProperty('key')){
+        mainWindow.webContents.send('_mainException', {
+            status:     0,
+            fromAction: '_werk',
+            message:    '_werk called with null "key" option'
+        });
+        return(false);
+    }
+
+    // get it
+    let val;
+    if (! (val = cfg.keyChain.getKeyValue({key: arg.key}))){
+        mainWindow.webContents.send('_mainException', {
+            status:      0,
+            fromAction:  '_werk',
+            message:      "failed to retrieve value from keyChain (getKeyValue failed): " + cfg.keyChain.error.message,
+            errorLog:     cfg.keyChain.log
+        });
+        return(false);
+    }
+
+    // copy it to buffer
+    clipboard.writeText(val);
+    return(true);
+
 });

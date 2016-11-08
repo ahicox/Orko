@@ -3,7 +3,7 @@
 // All of the Node.js APIs are available in this process.
 
 const {ipcRenderer} = require('electron');
-const {clipboard} = require('electron');
+let myData = {};
 
 // get outta dodge
 ipcRenderer.on('_exit', (event, message) => {
@@ -33,9 +33,40 @@ ipcRenderer.on('_renderKeyChain', (event, data) => {
 	var myHTML = [];
 	data.toc.forEach(function(key, idx){
 		console.log("_renderKeyChain (" + key + ")");
-		myHTML.push("<div id='" + key + "' class='copyItem'><span>" + key + "</span></div>");
+		myHTML.push(
+				"<div id='" + key + "' class='copyItem'>" +
+				"<div class='removeButton hideMe' key='" + key + "'></div>" +
+				"<span>" + key + "</span></div>"
+		);
 	});
 	$("#copyItemTab").empty().html(myHTML.join(""));
+
+	$(".copyItem").each(function(){
+		$(this).on("click", function(){
+
+			ipcRenderer.send('_werk', {
+				key:	$(this).attr('id')
+			});
+
+			// special effects
+			$(this).addClass("copyItemHighlight");
+			var that = $(this);
+			setTimeout(function(){
+				that.removeClass("copyItemHighlight");
+			}, 1600);
+			$("#msg").text("copied to clipboard");
+		});
+
+		$(this).find(".removeButton").each(function(){
+			$(this).on("click", function(){
+				ipcRenderer.send('_removeKey', {
+					key: $(this).attr('key')
+				});
+			});
+		});
+
+	});
+
 	openTab("copyItemTab");
 });
 
@@ -60,9 +91,11 @@ ipcRenderer.on('_authResponse', (event, data) => {
 		case "loaded":
 			// everything went ok, render the table of contents for the user
 			// table of contents is on data.toc
-
-			// insert code here
-
+			myData.unlocked = true;
+			setTimeout(function(){
+				myData.unlocked = false;
+				openTab('authenticationTab');
+			}, (1000 * 30));
 			break;
 
 		case "loaded-empty":
@@ -80,46 +113,8 @@ ipcRenderer.on('init', (event, data) => {
 	$("#title").text(data.appName + " v." + data.version);
 	$("#msg").text(data.defaultMsg);
 
-	// hang a hook on the exit button
-	$("#exit").on('click', function(){
-		$("#msg").text("sending _exit ...");
-		ipcRenderer.send('_exit', '');
-	});
-
-	// hang a hook on the reload button
-	$("#reload").on('click', function(){
-		//$("#msg").text("sending _restart ...");
-		ipcRenderer.send('_restart', '');
-	});
-
 	// initialize the GUI
 	initGui();
-
-	/*
-		ok actually this whole thing needs to go somewhere else
-		this is the init procedure. Basically it needs to set up
-		the GUI to show the login page and exit.
-
-		something like this:
-
-			1) show login page
-			2) authenticate
-					request controller to unlock keychain with login
-					fail: back to 1
-					success: retrieve key index
-			3) render key index as .copyItem div nodes
-			4) THEN hang all the copy to clipboard hooks (below) off the .copyItem nodes
-
-		note: we also need some stuff to add keys to the datastore, encrypt them
-		      and of course a serialize to disk. HTML5 localstorage would be right handy
-			  but it honestly feels suspect, as it's directly in the whole web browser sphere
-			  and some OS's like to centralize that shit (iOS in particular), so we should
-			  keep the encrypted keychain file in a separate file I think.
-
-			  Reminds me of java keystore stuff with SSL certs, etc.
-			  it's a smart way to do it, and i wonder if someone's already ported the whole
-			  shebang over to npm. bet they have. that oughta be the next step.
-	*/
 
 });
 
@@ -229,7 +224,37 @@ function WMFieldReturn(obj){
    call this when we need to initialize the GUI on app startup
 */
 function initGui() {
-	// there's not a lot to do here (yet)
+	// hang a hook on the exit button
+	$("#exit").on('click', function(){
+		$("#msg").text("sending _exit ...");
+		ipcRenderer.send('_exit', '');
+	});
+
+	// hang a hook on the reload button
+	$("#reload").on('click', function(){
+		//$("#msg").text("sending _restart ...");
+		ipcRenderer.send('_restart', '');
+	});
+
+	// hang a hook on the "add" button
+	$("#add").on('click', function(){
+		if ((myData.hasOwnProperty('unlocked')) && (myData.unlocked)){
+			openTab('addItemTab');
+		}
+	});
+
+	// the remove button
+	$("#remove").on('click', function(){
+		if (! myData.hasOwnProperty('removeMode')){ myData.removeMode = true; }
+		if (myData.removeMode){
+			$(".removeButton").show("slow");
+			myData.removeMode = false;
+		}else{
+			$(".removeButton").hide("fast");
+			myData.removeMode = true;
+		}
+
+	});
 
 	// do the default text/watermark thing for stuff in WMField class
 	$(".WMField").each(function(){
@@ -244,37 +269,6 @@ function initGui() {
 
 		$(this).on('keypress', function(e){
 			if (e.keyCode == 13){ WMFieldReturn($(this)); }
-		});
-	});
-
-	// I'M JUST KEEPING THIS HERE TEMPORARILY
-	// hang the copy to clipboard function and special effects
-	// onto all the .copyItem instances
-	$(".copyItem").each(function(){
-		$(this).on("click", function(){
-
-			// ok, when we get there, this actually needs to
-			// be the result of a synchronous event sent to the controller
-			// to request the decrypted value of the key in the datastore
-			// that this GUI layer will never see directly.
-			//
-			// the only thing the GUI should even know is the passcode ...
-			// and even then maybe just a hash of the passcode.
-			// which should be an argument to whatever service we send
-			// to the parent controller.
-			//
-			// remember, this GUI will not be the only potential requester
-			// if we do this right, there'll be a listener of some kind
-			// so that external scripts can get things from the keychain.
-			clipboard.writeText($(this).text().trim());
-
-			// special effects
-			$(this).addClass("copyItemHighlight");
-			var that = $(this);
-			setTimeout(function(){
-				that.removeClass("copyItemHighlight");
-			}, 1600);
-			$("#msg").text("copied to clipboard");
 		});
 	});
 
@@ -322,36 +316,34 @@ function auth(authString){
 
 
 /*
-	LEFT OFF HERE (11/4/2016)
-	the _addKey message to main works with keyChain now (embedded in
-	WMFieldReturn above -- speaking of, this code needs to be reorganized
-	something awful).
+	LEFT OFF HERE (11/8/2016)
 
-	Anyhow, next step is that we need something here in the renderer to catch
-	exceptions from the main process. I've created _mainException as the event
-	we just need to hook it up to something over here
+		* the click event on the copyItem objects also catches the
+		  click on the remove button. Because it is a decendant.
+		  it needs to be a descendant both to pick up the key but also
+		  for layout reasons, so we need to sort this out.
+		  no biggie but it's a thing.
 
-	after that, we just need to hook up some stuff in _renderKeyChain to hang hooks
-	off the rendered items to request the corresponding value off the keychain and
-	place it in the OS's cut/paste buffer
+		* main.js needs a _removeKey event and that needs to send
+		  a success event back to the renderer that gracefully hides
+		  the copyItemList then re-renders it
 
-	by there, we've pretty much got a working prototype that handles one item
-	from there:
+		* we still need something in the renderer to catch _mainException
+		  events and do something with them
 
-		* add a button that'll take us back into the "add an item" GUI to let us
-		  set up more than one item
+		* we need to figure out some kinda scrollbar situation
 
-		* add a button to let us remove a key
+		* we need to explicitly lock and unlock the gui (so add / remove, etc)
+		  when the auth times out
 
-		* I'm on the fence as to if an edit key is needed. honestly I just feel like
-		  add a key and overwrite might be good enough. possibly with some kinda
-		  'are you sure' dialog.
+		* we need to reset the contents of the passPhrase field when auth times out
 
-		* that and some general code cleanup. We've got lots of deadend placeholders
-		  in there like the idea of having multiple keychains (unnecessary in my opinion).
+		* we need to make the auth timeout part of the cfg object in main.js
+
+		* code cleanup still needed (of course)
 
 		* one idea that might be worth exploring is adding meta data to each key like maybe
-		   a version history (these are the last x values of this key), and the date maybe
+		  a version history (these are the last x values of this key), and the date maybe
 
 		* even better might be a password generattor as in "even i don't know the password"
 		  click a button, it makes a truly random 32 char string or whatever and inserts it into
