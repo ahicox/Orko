@@ -248,3 +248,47 @@ ipcMain.on('_werk', (event, arg) => {
     return(true);
 
 });
+
+
+/* remove a given key from the keychain */
+ipcMain.on('_removeKey', (event, arg) => {
+    // ain't havin' nun a that, yo!
+    if (! arg.hasOwnProperty('key')){
+        mainWindow.webContents.send('_mainException', {
+            status:     0,
+            fromAction: '_removeKey',
+            message:    '_removeKey called with null "key" option'
+        });
+        return(false);
+    }
+
+    // remove it
+    let val;
+    if (! (val = cfg.keyChain.deleteKey({key: arg.key}))){
+        mainWindow.webContents.send('_mainException', {
+            status:      0,
+            fromAction:  '_removeKey',
+            message:      "failed to remove keu from keyChain (deleteKey failed): " + cfg.keyChain.error.message,
+            errorLog:     cfg.keyChain.log
+        });
+        return(false);
+    }
+
+    let toc;
+    if (! (toc = cfg.keyChain.getTableOfContents())){
+        // gotta catch 'em all y'know ...
+        mainWindow.webContents.send('_mainException', {
+            status:      0,
+            fromAction:  '_removeKey',
+            message:      "failed to retrieve keyChain table of contents (getTableOfContents failed): " + cfg.keyChain.error.message,
+            errorLog:     cfg.keyChain.log
+        });
+        return(false);
+    }
+    mainWindow.webContents.send('_renderKeyChain', {
+        status:     1,
+        fromAction: "_addKey",
+        toc:        toc
+    });
+    return(true);
+});

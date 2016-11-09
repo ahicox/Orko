@@ -146,7 +146,7 @@ module.exports = function(args){
         }))){
             this.hasError = true;
             this.error = {
-                message:     "[addKey]: _deleteFromFile failed",
+                message:     "[deleteKey]: _deleteFromFile failed",
                 severity:    "error",
                 errorNumber: 12
             }
@@ -516,11 +516,6 @@ function _deleteFromFile (self, args){
 
     // delete the specified key
     delete theData.data[args.key];
-
-    // merge input data with what we got from the file
-    Object.keys(args.data).forEach(function(key){
-        theData.data[key] = args.data[key];
-    });
 
     // re-encrypt it
     theData.updated =  Math.floor(Date.now() / 1000);

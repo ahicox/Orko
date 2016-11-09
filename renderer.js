@@ -42,8 +42,8 @@ ipcRenderer.on('_renderKeyChain', (event, data) => {
 	$("#copyItemTab").empty().html(myHTML.join(""));
 
 	$(".copyItem").each(function(){
-		$(this).on("click", function(){
-
+		$(this).on("click", function(e){
+			e.stopPropagation();
 			ipcRenderer.send('_werk', {
 				key:	$(this).attr('id')
 			});
@@ -58,7 +58,8 @@ ipcRenderer.on('_renderKeyChain', (event, data) => {
 		});
 
 		$(this).find(".removeButton").each(function(){
-			$(this).on("click", function(){
+			$(this).on("click", function(e){
+				e.stopPropagation();
 				ipcRenderer.send('_removeKey', {
 					key: $(this).attr('key')
 				});
@@ -316,17 +317,9 @@ function auth(authString){
 
 
 /*
-	LEFT OFF HERE (11/8/2016)
+	LEFT OFF HERE (11/9/2016)
 
-		* the click event on the copyItem objects also catches the
-		  click on the remove button. Because it is a decendant.
-		  it needs to be a descendant both to pick up the key but also
-		  for layout reasons, so we need to sort this out.
-		  no biggie but it's a thing.
-
-		* main.js needs a _removeKey event and that needs to send
-		  a success event back to the renderer that gracefully hides
-		  the copyItemList then re-renders it
+		* need to blank out text input values on open add item tab
 
 		* we still need something in the renderer to catch _mainException
 		  events and do something with them
