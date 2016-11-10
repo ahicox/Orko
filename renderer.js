@@ -65,7 +65,7 @@ ipcRenderer.on('_renderKeyChain', (event, data) => {
 				});
 			});
 		});
-
+		$("#msg").text(" ");
 	});
 
 	openTab("copyItemTab");
@@ -201,21 +201,27 @@ function WMFieldReturn(obj){
 
 			// call authenticate service on parent
 			// see _authResponse listener for what happens next
+			var pk = obj.val().trim();
 			ipcRenderer.send('_auth', {
-				passKey: 	obj.val().trim(),
+				passKey: 	pk,
 				keyChain: 	'default'
 			});
+			obj.val('');
 			break;
 
 		case "addKey_value":
 			$("#msg").text("adding key ...")
 
 			// add a new key/value pair to the keyChain
+			var k = $("#addKey_key").val().trim();
+			var v = obj.val().trim();
 			ipcRenderer.send('_addKey', {
-				key:		$("#addKey_key").val().trim(),
-				value:		obj.val().trim(),
+				key:		k,
+				value:		v,
 				keyChain: 	'default'
 			});
+			setWMFieldDefault($("#addKey_key"));
+			setWMFieldDefault(obj);
 			break;
 
 	}

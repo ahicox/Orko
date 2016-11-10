@@ -19,6 +19,7 @@ div.inFocus {
 /* example non-draggable area */
 .copyItem {
     -webkit-app-region:     no-drag;
+    display:                block;
     -webkit-user-select:    none;
     cursor:		            default;
     color:                  #836FCC;
@@ -29,6 +30,8 @@ div.inFocus {
     border:                 solid 1px;
     border-color:           #211C33;
     transition:             border-color 1s, background-color .3s;
+    /*width:                  80%;*/
+    overflow:               hidden;
 }
 .copyItem:hover {
     background:             linear-gradient(to right, rgba(38, 38, 38, 1), rgba(31, 31, 31, .7), rgba(31, 31, 31, .4));
@@ -36,6 +39,21 @@ div.inFocus {
 }
 .copyItemHighlight {
     border-color:           #836FCC;
+}
+.removeButton {
+    /*display:                inline-block;*/
+    overflow:               hidden;
+    background-repeat:      no-repeat;
+    background-position:    center;
+    background-image:       url('./remove.svg');
+    background-size:        contain;
+    width:                  15px;
+    height:                 15px;
+    margin:                 0 5px 0 5px;
+    float:                  left;
+}
+.hideMe {
+    display:                none;
 }
 
 /* a simple button class */
@@ -150,7 +168,7 @@ input.default {
 }
 
 .tab {
-    display:none;
+    display:                none;
 }
 
 /* authentication tab */
